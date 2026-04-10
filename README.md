@@ -178,48 +178,6 @@ torch, torchvision, ultralytics, decord, scikit-learn,
 numpy, pandas, matplotlib, seaborn, tqdm, scipy
 ```
 
----
-
-## Timeline
-
-| Phase | Duration | What Gets Done |
-|-------|----------|----------------|
-| **Week 1** — Foundation | Days 1-7 | CNN-LSTM, 3D ResNet, MobileNetV2 trained and validated |
-| **Week 2** — Scaling | Days 8-14 | YOLOv8+LSTM, TimeSformer, ConvNeXt, Ensemble + Optuna tuning |
-| **Week 3** — Analysis | Days 15-21 | Statistical tests, paper figures, IEEE paper draft, ArXiv submission |
-
-> **Estimated compute:** 15-20 GPU hours total on Kaggle T4 x 2
-
----
-
-## Publication Target
-
-This work targets **IEEE ITSC 2026**. The benchmark is more comprehensive than published precedent:
-
-| Aspect | Ahmad et al. (2020) | Qanouni et al. (2024) | **This Work** |
-|--------|:-------------------:|:---------------------:|:-------------:|
-| Models compared | 3 + Ensemble | 4 | **7** |
-| Dataset size | 791 frames | 60 videos | **1,500 videos** |
-| Statistical tests | None | None | **t-test, Friedman, Bonferroni** |
-| Metrics reported | 4 | 1 | **8+** |
-| Modern architectures | No | No | **Yes** |
-| Calibration analysis | No | No | **Yes** |
-
----
-
-## Citation
-
-This project uses the Nexar Dashcam Collision Prediction dataset. If you use this work, please cite:
-
-```bibtex
-@InProceedings{BaoMM2020,
-    author    = {Bao, Wentao and Yu, Qi and Kong, Yu},
-    title     = {Uncertainty-based Traffic Accident Anticipation
-                 with Spatio-Temporal Relational Learning},
-    booktitle = {ACM Multimedia Conference},
-    year      = {2020}
-}
-```
 
 ---
 

@@ -1,0 +1,1205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Inertia — Driver Safety Scoring</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=Fira+Sans:wght@300;400;500;600;700&family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet"/>
+<style>
+/* ═══════════════════════════════════════════════════════════════
+   INERTIA v7 — Light mode, orange gradient brand
+   ═══════════════════════════════════════════════════════════════ */
+:root {
+  /* Page & surface */
+  --bg0: #eef2f7;       /* page background */
+  --bg1: #ffffff;       /* sidebar / card */
+  --bg2: #f8fafc;       /* nested card */
+  --bg3: #f1f5f9;       /* input / hover */
+  --bg4: #e8eef6;       /* deeper hover */
+
+  /* Borders */
+  --bdr:  rgba(0,0,0,0.07);
+  --bdr2: rgba(0,0,0,0.12);
+
+  /* Text */
+  --t1: #0f172a;   /* primary   */
+  --t2: #475569;   /* secondary */
+  --t3: #94a3b8;   /* labels    */
+
+  /* Brand — orange gradient stops */
+  --brand-a: #f97316;
+  --brand-b: #ea580c;
+  --brand-c: #f59e0b;
+
+  /* Semantic */
+  --green:  #16a34a;
+  --amber:  #d97706;
+  --red:    #dc2626;
+  --blue:   #2563eb;
+
+  --green-bg:    rgba(22,163,74,0.09);
+  --amber-bg:    rgba(217,119,6,0.09);
+  --red-bg:      rgba(220,38,38,0.09);
+  --blue-bg:     rgba(37,99,235,0.09);
+
+  --green-border: rgba(22,163,74,0.25);
+  --amber-border: rgba(217,119,6,0.25);
+  --red-border:   rgba(220,38,38,0.25);
+
+  --green-glow: rgba(22,163,74,0.20);
+  --red-glow:   rgba(220,38,38,0.20);
+  --amber-glow: rgba(217,119,6,0.20);
+  --blue-glow:  rgba(37,99,235,0.20);
+
+  /* Card shadow */
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.07), 0 1px 2px rgba(0,0,0,0.05);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.05);
+  --shadow-lg: 0 12px 32px rgba(0,0,0,0.10), 0 2px 6px rgba(0,0,0,0.05);
+
+  --font-display: 'Outfit', sans-serif;
+  --font-body:    'Fira Sans', sans-serif;
+  --font-mono:    'Fira Code', monospace;
+
+  --r:  10px;
+  --rs: 7px;
+  --rl: 16px;
+
+  --ease-spring: cubic-bezier(0.22,1,0.36,1);
+}
+
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+html, body { height:100%; overflow:hidden; background:var(--bg0); }
+body {
+  font-family: var(--font-body);
+  color: var(--t1);
+  font-size: 15px;
+  -webkit-font-smoothing: antialiased;
+  line-height: 1.5;
+}
+
+::-webkit-scrollbar { width:4px; }
+::-webkit-scrollbar-track { background:transparent; }
+::-webkit-scrollbar-thumb { background:var(--bdr2); border-radius:2px; }
+
+/* ─── Shared label style ──────────────────────────────────── */
+.label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--t3);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+/* ─── Brand gradient mixin ────────────────────────────────── */
+.brand-text {
+  background: linear-gradient(135deg, var(--brand-a) 0%, var(--brand-b) 45%, var(--brand-c) 100%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: shimmer 5s linear infinite;
+}
+@keyframes shimmer { from{background-position:0% center} to{background-position:200% center} }
+
+/* ═══════════════════════════════════════════════════════════
+   UPLOAD SCREEN
+   ═══════════════════════════════════════════════════════════ */
+#upload-screen {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  position: relative;
+  overflow: hidden;
+  background: var(--bg0);
+}
+
+/* Warm ambient blobs */
+#upload-screen::before {
+  content: '';
+  position: absolute;
+  inset: -20%;
+  background:
+    radial-gradient(ellipse 700px 500px at 25% 30%, rgba(249,115,22,0.08) 0%, transparent 60%),
+    radial-gradient(ellipse 500px 500px at 75% 65%, rgba(245,158,11,0.07) 0%, transparent 60%),
+    radial-gradient(ellipse 400px 400px at 60% 15%, rgba(234,88,12,0.05) 0%, transparent 60%);
+  animation: blobDrift 12s ease-in-out infinite alternate;
+  pointer-events: none;
+}
+
+/* Dot grid */
+#upload-screen::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(rgba(0,0,0,0.07) 1px, transparent 1px);
+  background-size: 30px 30px;
+  pointer-events: none;
+  mask-image: radial-gradient(ellipse 65% 65% at 50% 50%, black 20%, transparent 100%);
+}
+
+@keyframes blobDrift {
+  from { transform: scale(1) translateY(0); }
+  to   { transform: scale(1.06) translateY(-10px); }
+}
+
+.up-content {
+  position: relative; z-index: 1;
+  display: flex; flex-direction: column; align-items: center;
+}
+
+.up-logo {
+  font-family: var(--font-display);
+  font-size: 3.4rem; font-weight: 800;
+  letter-spacing: -2px; line-height: 1;
+  margin-bottom: 0.25rem;
+}
+
+.up-tagline {
+  font-family: var(--font-mono);
+  font-size: 0.68rem; color: var(--t3);
+  letter-spacing: 0.18em; text-transform: uppercase;
+  margin-bottom: 2.5rem;
+}
+
+/* Upload card */
+.up-card {
+  background: var(--bg1);
+  border: 1px solid var(--bdr);
+  border-radius: var(--rl);
+  padding: 2rem 2.25rem 2.25rem;
+  width: 100%; max-width: 460px;
+  box-shadow: var(--shadow-lg);
+  animation: rise 0.55s var(--ease-spring) both;
+  position: relative; overflow: hidden;
+}
+
+/* Orange accent top border */
+.up-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--brand-a), var(--brand-b), var(--brand-c));
+  border-radius: var(--rl) var(--rl) 0 0;
+}
+
+@keyframes rise { from{opacity:0;transform:translateY(22px)} to{opacity:1;transform:none} }
+
+.up-card-title {
+  font-family: var(--font-display);
+  font-weight: 600; font-size: 1.05rem;
+  color: var(--t1);
+  margin-bottom: 1.5rem; padding-bottom: 1rem;
+  border-bottom: 1px solid var(--bdr);
+}
+
+.form-group { margin-bottom: 1.2rem; }
+.form-group .label { display:block; margin-bottom: 0.45rem; }
+
+.field-sel {
+  width: 100%; padding: 0.7rem 1rem;
+  background: var(--bg3); border: 1px solid var(--bdr2);
+  border-radius: var(--rs); color: var(--t1);
+  font-family: var(--font-body); font-size: 0.9rem;
+  cursor: pointer; appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' fill='%2394a3b8'%3E%3Cpath d='M5 6L0 0h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 1rem center;
+  transition: border-color 0.2s, box-shadow 0.2s; outline: none;
+}
+.field-sel:focus {
+  border-color: var(--brand-a);
+  box-shadow: 0 0 0 3px rgba(249,115,22,0.12);
+}
+.field-sel option { background: #fff; }
+
+.drop-zone {
+  border: 1.5px dashed var(--bdr2); border-radius: var(--r);
+  padding: 2rem 1.5rem; text-align: center; cursor: pointer;
+  transition: all 0.22s var(--ease-spring); position: relative; overflow: hidden;
+  background: var(--bg2);
+}
+.drop-zone::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: radial-gradient(ellipse 80% 80% at 50% 110%, rgba(249,115,22,0.07) 0%, transparent 65%);
+  opacity: 0; transition: opacity 0.25s;
+}
+.drop-zone:hover::after, .drop-zone.dragover::after { opacity: 1; }
+.drop-zone:hover, .drop-zone.dragover {
+  border-color: var(--brand-a);
+  background: rgba(249,115,22,0.03);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+.drop-zone:hover .dz-icon { opacity: 0.7; transform: translateY(-3px); }
+
+.dz-icon {
+  width: 38px; height: 38px; margin: 0 auto 0.7rem; display: block;
+  opacity: 0.3; transition: opacity 0.22s, transform 0.22s; position: relative; z-index: 1;
+}
+.dz-txt { color: var(--t2); font-size: 0.875rem; line-height: 1.65; position: relative; z-index: 1; }
+.dz-txt strong { color: var(--brand-b); font-weight: 600; }
+
+.file-chip {
+  display: none; margin-top: 0.7rem;
+  font-family: var(--font-mono); font-size: 0.72rem; color: var(--brand-b);
+  background: rgba(249,115,22,0.08); border: 1px solid rgba(249,115,22,0.25);
+  border-radius: 20px; padding: 0.28rem 0.9rem;
+  animation: chipIn 0.22s ease both; position: relative; z-index: 1;
+}
+@keyframes chipIn { from{opacity:0;transform:scale(0.9)} to{opacity:1;transform:none} }
+.file-chip.show { display: inline-block; }
+
+.btn-go {
+  width: 100%; padding: 0.88rem;
+  border: none; border-radius: var(--rs);
+  background: linear-gradient(135deg, var(--brand-a), var(--brand-b));
+  color: #fff; font-family: var(--font-display); font-weight: 700;
+  font-size: 0.95rem; letter-spacing: 0.03em;
+  cursor: pointer; transition: all 0.2s var(--ease-spring);
+  margin-top: 0.85rem; opacity: 0.35; pointer-events: none;
+  position: relative; overflow: hidden;
+}
+.btn-go::after {
+  content: '';
+  position: absolute; top: 0; left: -100%; width: 60%; height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.20), transparent);
+  transition: left 0.45s; transform: skewX(-18deg);
+}
+.btn-go.ready { opacity: 1; pointer-events: all; }
+.btn-go.ready:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 28px rgba(234,88,12,0.30);
+}
+.btn-go.ready:hover::after { left: 150%; }
+.btn-go.ready:active { transform: translateY(0); }
+.btn-go.loading { opacity: 0.55; pointer-events: none; }
+
+/* ═══════════════════════════════════════════════════════════
+   DASHBOARD
+   ═══════════════════════════════════════════════════════════ */
+#dash { display:none; flex-direction:column; height:100vh; overflow:hidden; }
+#dash.on { display:flex; animation:fadeIn 0.3s ease; }
+@keyframes fadeIn { from{opacity:0} to{opacity:1} }
+
+/* ── Topbar ──────────────────────────────────────────────── */
+.topbar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 1.25rem;
+  height: 50px; min-height: 50px;
+  background: var(--bg1);
+  border-bottom: 1px solid var(--bdr);
+  flex-shrink: 0; position: relative; z-index: 10;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+}
+
+.tb-left { display:flex; align-items:center; gap:0.9rem; }
+.tb-logo { font-family:var(--font-display); font-weight:800; font-size:1.18rem; letter-spacing:-0.5px; }
+.tb-sep { width:1px; height:16px; background:var(--bdr2); }
+.tb-badge {
+  font-family:var(--font-mono); font-size:0.68rem; font-weight:600;
+  padding:0.2rem 0.65rem; border-radius:20px;
+  background:var(--bg3); border:1px solid var(--bdr2); color:var(--t2);
+  letter-spacing:0.06em;
+}
+
+.tb-right { display:flex; align-items:center; gap:0.75rem; }
+.tb-status { display:flex; align-items:center; gap:0.45rem; font-family:var(--font-mono); font-size:0.72rem; color:var(--t2); }
+
+.sdot {
+  width:7px; height:7px; border-radius:50%;
+  background:var(--t3); transition:background 0.3s, box-shadow 0.3s; flex-shrink:0;
+}
+.sdot.live {
+  background:var(--green);
+  box-shadow:0 0 0 3px rgba(22,163,74,0.18), 0 0 8px var(--green-glow);
+  animation:pulse 1.8s infinite;
+}
+.sdot.err  { background:var(--red);  box-shadow:0 0 6px var(--red-glow); }
+.sdot.done { background:var(--blue); box-shadow:0 0 6px var(--blue-glow); }
+@keyframes pulse { 0%,100%{opacity:1} 55%{opacity:0.25} }
+
+.btn-outline {
+  padding:0.38rem 0.85rem;
+  background:transparent; border:1px solid var(--bdr2);
+  border-radius:var(--rs); color:var(--t2);
+  font-family:var(--font-body); font-size:0.8rem;
+  cursor:pointer; transition:all 0.18s;
+  display:flex; align-items:center; gap:5px;
+}
+.btn-outline:hover {
+  border-color: var(--brand-a);
+  color: var(--brand-b);
+  background: rgba(249,115,22,0.05);
+}
+
+/* ── Layout ──────────────────────────────────────────────── */
+.layout {
+  display: grid;
+  grid-template-columns: 405px 1fr;
+  height: calc(100vh - 50px);
+  overflow: hidden;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   LEFT COLUMN
+   ═══════════════════════════════════════════════════════════ */
+.left-col {
+  display: flex; flex-direction: column;
+  background: var(--bg1);
+  border-right: 1px solid var(--bdr);
+  overflow-y: auto;
+}
+
+/* ── Video ───────────────────────────────────────────────── */
+.video-cell {
+  position: relative; background: #0a0a0a;
+  flex-shrink: 0; width: 100%; aspect-ratio: 16/9;
+}
+#dash-video { width:100%; height:100%; object-fit:contain; display:block; }
+
+.rec-badge {
+  position:absolute; top:10px; left:10px; z-index:5;
+  display:flex; align-items:center; gap:6px;
+  background:rgba(255,255,255,0.88); backdrop-filter:blur(12px);
+  border:1px solid rgba(0,0,0,0.10); border-radius:20px;
+  padding:4px 10px;
+  font-family:var(--font-mono); font-size:0.68rem; color:var(--t2); letter-spacing:0.08em;
+}
+.rec-dot {
+  width:6px; height:6px; border-radius:50%; background:var(--t3);
+  flex-shrink:0; transition:background 0.3s, box-shadow 0.3s;
+}
+.rec-dot.on { background:var(--red); box-shadow:0 0 6px var(--red-glow); animation:pulse 0.9s infinite; }
+
+.vid-score-hud {
+  position:absolute; bottom:12px; right:12px; z-index:5;
+  background:rgba(255,255,255,0.90); backdrop-filter:blur(16px);
+  border:1px solid rgba(0,0,0,0.10); border-radius:var(--r);
+  padding:10px 14px; text-align:center; min-width:88px;
+  box-shadow: var(--shadow-md);
+}
+.vsh-label { font-family:var(--font-mono); font-size:0.58rem; color:var(--t3); letter-spacing:0.14em; text-transform:uppercase; margin-bottom:3px; }
+.vsh-num   { font-family:var(--font-display); font-weight:800; font-size:2.2rem; line-height:1; letter-spacing:-1px; transition:color 0.35s; }
+.vsh-band  { display:inline-block; margin-top:5px; font-family:var(--font-mono); font-size:0.6rem; font-weight:600; letter-spacing:0.06em; padding:2px 9px; border-radius:20px; transition:all 0.35s; }
+
+.vprog { position:absolute; bottom:0; left:0; right:0; height:3px; background:rgba(0,0,0,0.10); z-index:6; }
+.vprog-fill { height:100%; width:0%; background:var(--green); transition:width 0.18s linear, background 0.35s; }
+
+/* ── Gauge ───────────────────────────────────────────────── */
+.gauge-section {
+  padding: 1.25rem 1rem 0.85rem;
+  display: flex; flex-direction: column; align-items: center; gap: 0.6rem;
+  border-bottom: 1px solid var(--bdr);
+}
+.gauge-wrap { position:relative; width:158px; height:158px; }
+.gauge-wrap svg { width:100%; height:100%; transform:rotate(-90deg); }
+#ring-bg   { fill:none; stroke:var(--bg3); stroke-width:9; }
+#ring-fill {
+  fill:none; stroke:var(--green); stroke-width:9; stroke-linecap:round;
+  stroke-dasharray:0 408;
+  transition:stroke-dasharray 0.5s var(--ease-spring), stroke 0.35s;
+  filter: drop-shadow(0 0 4px currentColor);
+}
+.gauge-center { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+.gauge-num  { font-family:var(--font-display); font-weight:800; font-size:2.7rem; line-height:1; letter-spacing:-2px; transition:color 0.35s; }
+.gauge-unit { font-family:var(--font-mono); font-size:0.6rem; color:var(--t3); letter-spacing:0.12em; text-transform:uppercase; margin-top:2px; }
+
+.risk-badge { font-family:var(--font-mono); font-size:0.74rem; font-weight:600; letter-spacing:0.08em; padding:4px 16px; border-radius:20px; transition:all 0.35s; }
+
+/* ── Stat row ────────────────────────────────────────────── */
+.stat-row {
+  display: grid; grid-template-columns: 1fr 1fr 1fr;
+  gap: 6px; width: 100%;
+  padding: 0.75rem 0.9rem 0.85rem;
+  border-bottom: 1px solid var(--bdr);
+}
+.stat-cell {
+  background: var(--bg2); border: 1px solid var(--bdr);
+  border-radius: var(--rs); padding: 10px 8px; text-align: center;
+  transition: border-color 0.2s, transform 0.15s, box-shadow 0.15s;
+}
+.stat-cell:hover { border-color:var(--bdr2); transform:translateY(-1px); box-shadow:var(--shadow-sm); }
+.stat-val { font-family:var(--font-display); font-weight:700; font-size:1.25rem; line-height:1; transition:color 0.35s; }
+.stat-lbl { font-family:var(--font-mono); font-size:9px; color:var(--t3); text-transform:uppercase; letter-spacing:0.1em; margin-top:5px; }
+
+/* ── Model info ──────────────────────────────────────────── */
+.model-info { padding: 0.85rem 0.9rem; display: flex; flex-direction: column; gap: 4px; }
+.mi-header {
+  font-family:var(--font-mono); font-size:10px; color:var(--t3);
+  text-transform:uppercase; letter-spacing:0.1em; margin-bottom:5px;
+}
+.mi-row { display:flex; align-items:center; justify-content:space-between; padding:3px 0; }
+.mi-key { font-family:var(--font-mono); font-size:11px; color:var(--t3); }
+.mi-val { font-family:var(--font-mono); font-size:11px; color:var(--t2); font-weight:500; }
+
+/* ═══════════════════════════════════════════════════════════
+   RIGHT COLUMN
+   ═══════════════════════════════════════════════════════════ */
+.right-col {
+  display: flex; flex-direction: column;
+  overflow-y: auto; background: var(--bg0);
+  gap: 8px; padding: 8px;
+}
+
+.section {
+  background: var(--bg1);
+  border: 1px solid var(--bdr);
+  border-radius: var(--r);
+  padding: 1rem 1.15rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.sec-hdr { display:flex; align-items:center; justify-content:space-between; margin-bottom: 0.85rem; }
+.sec-title {
+  display:flex; align-items:center; gap:7px;
+  font-family:var(--font-mono); font-size:10px; font-weight:500;
+  color:var(--t2); text-transform:uppercase; letter-spacing:0.1em;
+}
+.sec-dot { width:5px; height:5px; border-radius:50%; flex-shrink:0; }
+
+.live-pill {
+  font-family:var(--font-mono); font-size:0.6rem; font-weight:600; letter-spacing:0.1em;
+  padding:2px 9px; border-radius:20px;
+  background:var(--green-bg); border:1px solid var(--green-border); color:var(--green);
+  opacity:0; transition:opacity 0.3s;
+}
+.live-pill.on { opacity:1; animation:livePulse 2.2s infinite; }
+@keyframes livePulse { 0%,100%{opacity:1} 50%{opacity:0.45} }
+
+/* ── Live metrics ────────────────────────────────────────── */
+.metrics-top { display: grid; grid-template-columns: auto 1fr; gap: 0.9rem; align-items: start; }
+
+.cur-score-block {
+  display: flex; flex-direction: column; align-items: center;
+  background: var(--bg2); border: 1px solid var(--bdr);
+  border-radius: var(--r); padding: 1rem 1.25rem; min-width: 118px;
+  position: relative; overflow: hidden;
+}
+.cur-score-block::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  background: linear-gradient(90deg, var(--brand-a), var(--brand-b), var(--brand-c));
+}
+
+.csb-label { font-family:var(--font-mono); font-size:9px; color:var(--t3); text-transform:uppercase; letter-spacing:0.1em; margin-bottom:6px; }
+.csb-num   { font-family:var(--font-display); font-weight:800; font-size:3.8rem; line-height:1; letter-spacing:-3px; transition:color 0.35s; }
+.csb-band  { display:inline-block; margin-top:8px; font-family:var(--font-mono); font-size:0.65rem; font-weight:600; letter-spacing:0.08em; padding:3px 12px; border-radius:20px; transition:all 0.35s; }
+
+.m-grid { display:grid; grid-template-columns:1fr 1fr; gap:5px; }
+.m-cell {
+  background: var(--bg2); border: 1px solid var(--bdr);
+  border-radius: var(--rs); padding: 10px 12px;
+  transition: border-color 0.18s, box-shadow 0.18s;
+}
+.m-cell:hover { border-color:var(--bdr2); box-shadow:var(--shadow-sm); }
+.m-lbl { font-family:var(--font-mono); font-size:9px; color:var(--t3); text-transform:uppercase; letter-spacing:0.08em; margin-bottom:5px; }
+.m-val { font-family:var(--font-display); font-weight:600; font-size:1.1rem; color:var(--t1); transition:color 0.35s; }
+
+/* ── Charts ──────────────────────────────────────────────── */
+.chart-wrap { width:100%; position:relative; }
+.chart-tall  { height:172px; }
+.chart-short { height:132px; }
+.chart-wrap canvas { width:100%!important; height:100%!important; display:block; }
+
+/* ── Risk bar ────────────────────────────────────────────── */
+.rbar-outer { background:var(--bg3); border-radius:6px; overflow:hidden; height:8px; }
+.rbar { display:flex; height:100%; gap:2px; }
+.rseg { height:100%; transition:width 0.45s var(--ease-spring); border-radius:3px; }
+.rlegend { display:flex; gap:1.25rem; margin-top:0.65rem; flex-wrap:wrap; }
+.rleg-item { display:flex; align-items:center; gap:6px; font-family:var(--font-mono); font-size:10px; color:var(--t2); }
+.rleg-dot  { width:6px; height:6px; border-radius:50%; flex-shrink:0; }
+
+/* ── Session summary ─────────────────────────────────────── */
+.sum-grid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px; }
+.sum-cell { background:var(--bg2); border:1px solid var(--bdr); border-radius:var(--rs); padding:11px 12px; transition:border-color 0.18s, box-shadow 0.18s; }
+.sum-cell:hover { border-color:var(--bdr2); box-shadow:var(--shadow-sm); }
+.sum-lbl { font-family:var(--font-mono); font-size:9px; color:var(--t3); text-transform:uppercase; letter-spacing:0.08em; margin-bottom:5px; }
+.sum-val { font-family:var(--font-display); font-weight:700; font-size:1.3rem; }
+
+/* ── Colour helpers ──────────────────────────────────────── */
+.c-green { color:var(--green) !important; }
+.c-amber { color:var(--amber) !important; }
+.c-red   { color:var(--red)   !important; }
+.c-blue  { color:var(--blue)  !important; }
+
+.badge-safe   { background:var(--green-bg); border:1px solid var(--green-border); color:var(--green); }
+.badge-medium { background:var(--amber-bg); border:1px solid var(--amber-border); color:var(--amber); }
+.badge-danger { background:var(--red-bg);   border:1px solid var(--red-border);   color:var(--red); }
+.badge-wait   { background:var(--bg3); border:1px solid var(--bdr2); color:var(--t3); }
+
+/* ═══════════════════════════════════════════════════════════
+   LOADING OVERLAY
+   ═══════════════════════════════════════════════════════════ */
+#overlay {
+  position:fixed; inset:0;
+  background:rgba(238,242,247,0.88); backdrop-filter:blur(8px);
+  display:none; align-items:center; justify-content:center;
+  flex-direction:column; gap:1.1rem; z-index:1000;
+}
+#overlay.on { display:flex; animation:fadeIn 0.2s ease; }
+
+.spin {
+  width:44px; height:44px;
+  border:3px solid var(--bg3);
+  border-top-color: var(--brand-a);
+  border-right-color: var(--brand-c);
+  border-radius:50%; animation:spin 0.85s linear infinite;
+  box-shadow:0 0 16px rgba(249,115,22,0.20);
+}
+@keyframes spin { to{transform:rotate(360deg)} }
+
+.ol-main { font-family:var(--font-display); font-weight:600; font-size:1.05rem; color:var(--t1); }
+.ol-sub  { font-family:var(--font-mono); font-size:0.72rem; color:var(--t3); letter-spacing:0.04em; }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════════
+     UPLOAD SCREEN
+     ══════════════════════════════════════════════════════ -->
+<div id="upload-screen">
+  <div class="up-content">
+    <div class="up-logo"><span class="brand-text">Inertia</span></div>
+    <div class="up-tagline">Driver Safety Scoring · Deep Learning</div>
+
+    <div class="up-card">
+      <div class="up-card-title">Analyze a Dashcam Video</div>
+
+      <div class="form-group">
+        <div class="label">Model</div>
+        <select id="model-select" class="field-sel">
+          <option value="" disabled selected>Loading models…</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <div class="label">Video File</div>
+        <div class="drop-zone" id="drop-zone">
+          <svg class="dz-icon" viewBox="0 0 40 40" fill="none">
+            <path d="M20 27V15M20 15L14 21M20 15L26 21"
+              stroke="#94a3b8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M8 30c0 2.2 1.8 4 4 4h16c2.2 0 4-1.8 4-4"
+              stroke="#94a3b8" stroke-width="1.8" stroke-linecap="round"/>
+          </svg>
+          <div class="dz-txt">Drag &amp; drop a <strong>.mp4</strong> or <strong>click to browse</strong></div>
+          <div class="file-chip" id="file-chip"></div>
+        </div>
+        <input type="file" id="file-input" accept="video/mp4,video/*" hidden/>
+      </div>
+
+      <button class="btn-go" id="btn-go">Analyze Video</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     DASHBOARD
+     ══════════════════════════════════════════════════════ -->
+<div id="dash">
+
+  <div class="topbar">
+    <div class="tb-left">
+      <div class="tb-logo"><span class="brand-text">Inertia</span></div>
+      <div class="tb-sep"></div>
+      <div class="tb-badge" id="tb-model">—</div>
+    </div>
+    <div class="tb-right">
+      <div class="tb-status">
+        <div class="sdot" id="sdot"></div>
+        <span id="stxt">Connecting</span>
+      </div>
+      <button class="btn-outline" id="btn-new">
+        <svg width="11" height="11" viewBox="0 0 11 11" fill="none">
+          <path d="M5.5 1v9M1 5.5h9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+        </svg>
+        New Video
+      </button>
+    </div>
+  </div>
+
+  <div class="layout">
+
+    <!-- ═══ LEFT ══════════════════════════════════════════ -->
+    <div class="left-col">
+
+      <div class="video-cell">
+        <video id="dash-video" muted playsinline></video>
+        <div class="rec-badge">
+          <div class="rec-dot" id="rec-dot"></div>
+          <span id="rec-txt">IDLE</span>
+        </div>
+        <div class="vid-score-hud">
+          <div class="vsh-label">Score</div>
+          <div class="vsh-num" id="vsh-num">--</div>
+          <div class="vsh-band badge-wait" id="vsh-band">WAITING</div>
+        </div>
+        <div class="vprog"><div class="vprog-fill" id="vprog-fill"></div></div>
+      </div>
+
+      <div class="gauge-section">
+        <div class="gauge-wrap">
+          <svg viewBox="0 0 160 160">
+            <circle id="ring-bg"   cx="80" cy="80" r="65"/>
+            <circle id="ring-fill" cx="80" cy="80" r="65"/>
+          </svg>
+          <div class="gauge-center">
+            <div class="gauge-num" id="gauge-num">--</div>
+            <div class="gauge-unit">/ 100</div>
+          </div>
+        </div>
+        <div class="risk-badge badge-wait" id="risk-badge">WAITING</div>
+      </div>
+
+      <div class="stat-row">
+        <div class="stat-cell">
+          <div class="stat-val c-red" id="s-min">--</div>
+          <div class="stat-lbl">Min</div>
+        </div>
+        <div class="stat-cell">
+          <div class="stat-val c-blue" id="s-mean">--</div>
+          <div class="stat-lbl">Mean</div>
+        </div>
+        <div class="stat-cell">
+          <div class="stat-val c-green" id="s-max">--</div>
+          <div class="stat-lbl">Max</div>
+        </div>
+      </div>
+
+      <div class="model-info">
+        <div class="mi-header">Model Info</div>
+        <div class="mi-row"><span class="mi-key">Architecture</span><span class="mi-val" id="mi-arch">—</span></div>
+        <div class="mi-row"><span class="mi-key">Val AUC</span><span class="mi-val c-green" id="mi-auc">—</span></div>
+        <div class="mi-row"><span class="mi-key">Checkpoint</span><span class="mi-val" id="mi-epoch">—</span></div>
+        <div class="mi-row"><span class="mi-key">Fold</span><span class="mi-val" id="mi-fold">—</span></div>
+      </div>
+
+    </div>
+
+    <!-- ═══ RIGHT ═════════════════════════════════════════ -->
+    <div class="right-col">
+
+      <!-- ① Live metrics -->
+      <div class="section">
+        <div class="sec-hdr">
+          <div class="sec-title">
+            <div class="sec-dot" style="background:var(--green)"></div>
+            Live Analysis
+          </div>
+          <div class="live-pill on" id="live-ind">LIVE</div>
+        </div>
+        <div class="metrics-top">
+          <div class="cur-score-block">
+            <div class="csb-label">Safety Score</div>
+            <div class="csb-num" id="big-score">--</div>
+            <div class="csb-band badge-wait" id="big-band">WAITING</div>
+          </div>
+          <div class="m-grid">
+            <div class="m-cell">
+              <div class="m-lbl">Crash Probability</div>
+              <div class="m-val" id="m-prob">—</div>
+            </div>
+            <div class="m-cell">
+              <div class="m-lbl">Risk Band</div>
+              <div class="m-val" id="m-band">—</div>
+            </div>
+            <div class="m-cell">
+              <div class="m-lbl">Windows Analyzed</div>
+              <div class="m-val" id="m-win">0</div>
+            </div>
+            <div class="m-cell">
+              <div class="m-lbl">Video Position</div>
+              <div class="m-val" id="m-pos">0.0 s</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ② Safety score timeline -->
+      <div class="section">
+        <div class="sec-hdr">
+          <div class="sec-title">
+            <div class="sec-dot" style="background:var(--green)"></div>
+            Safety Score Timeline
+          </div>
+          <div class="live-pill" id="live-score">LIVE</div>
+        </div>
+        <div class="chart-wrap chart-tall"><canvas id="score-chart"></canvas></div>
+      </div>
+
+      <!-- ③ Crash probability -->
+      <div class="section">
+        <div class="sec-hdr">
+          <div class="sec-title">
+            <div class="sec-dot" style="background:var(--red)"></div>
+            Crash Probability
+          </div>
+          <div class="live-pill" id="live-prob">LIVE</div>
+        </div>
+        <div class="chart-wrap chart-short"><canvas id="prob-chart"></canvas></div>
+      </div>
+
+      <!-- ④ Risk distribution -->
+      <div class="section">
+        <div class="sec-hdr">
+          <div class="sec-title">
+            <div class="sec-dot" style="background:var(--amber)"></div>
+            Risk Distribution
+          </div>
+          <span style="font-family:var(--font-mono);font-size:10px;color:var(--t3)" id="rwin-count">0 windows</span>
+        </div>
+        <div class="rbar-outer">
+          <div class="rbar">
+            <div class="rseg" id="rb-s" style="width:100%;background:var(--green)"></div>
+            <div class="rseg" id="rb-m" style="width:0%;background:var(--amber)"></div>
+            <div class="rseg" id="rb-h" style="width:0%;background:var(--red)"></div>
+          </div>
+        </div>
+        <div class="rlegend">
+          <div class="rleg-item">
+            <div class="rleg-dot" style="background:var(--green)"></div>
+            Safe — <strong id="rb-sp" style="color:var(--t1)">100%</strong>
+          </div>
+          <div class="rleg-item">
+            <div class="rleg-dot" style="background:var(--amber)"></div>
+            Medium — <strong id="rb-mp" style="color:var(--t1)">0%</strong>
+          </div>
+          <div class="rleg-item">
+            <div class="rleg-dot" style="background:var(--red)"></div>
+            High Risk — <strong id="rb-hp" style="color:var(--t1)">0%</strong>
+          </div>
+        </div>
+      </div>
+
+      <!-- ⑤ Session summary -->
+      <div class="section">
+        <div class="sec-hdr">
+          <div class="sec-title">
+            <div class="sec-dot" style="background:var(--blue)"></div>
+            Session Summary
+          </div>
+        </div>
+        <div class="sum-grid">
+          <div class="sum-cell"><div class="sum-lbl">Min Score</div><div class="sum-val c-red"  id="ss-min">—</div></div>
+          <div class="sum-cell"><div class="sum-lbl">Mean Score</div><div class="sum-val c-blue" id="ss-mean">—</div></div>
+          <div class="sum-cell"><div class="sum-lbl">Max Score</div><div class="sum-val c-green" id="ss-max">—</div></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Loading overlay -->
+<div id="overlay">
+  <div class="spin"></div>
+  <div class="ol-main" id="ol-main">Initializing…</div>
+  <div class="ol-sub"  id="ol-sub"></div>
+</div>
+
+<script>
+/* ── State ──────────────────────────────────────────────── */
+const API = '';
+let selectedModel = '', selectedFile = null, uploadedPath = '', sessionId = '', ws = null;
+let allResults = [], allScores = [], allProbs = [], chartTimes = [];
+let maxCrashProb = 0, analysisComplete = false;
+
+/* ── DOM ─────────────────────────────────────────────────── */
+const $ = id => document.getElementById(id);
+const uploadScreen = $('upload-screen'), dashEl = $('dash');
+const modelSelect = $('model-select'), dropZone = $('drop-zone');
+const fileInput = $('file-input'), fileChip = $('file-chip');
+const btnGo = $('btn-go'), btnNew = $('btn-new');
+const overlay = $('overlay'), dashVideo = $('dash-video');
+
+/* ── Ring ────────────────────────────────────────────────── */
+const RING_C = 2 * Math.PI * 65;
+function setRing(s) {
+  const fill = Math.max(0, Math.min(100, s)) / 100 * RING_C;
+  $('ring-fill').style.strokeDasharray = `${fill} ${RING_C}`;
+  $('ring-fill').style.stroke = rc(s);
+}
+const rc  = s => s < 40 ? 'var(--red)' : s < 70 ? 'var(--amber)' : 'var(--green)';
+const bdg = s => s < 40 ? 'badge-danger' : s < 70 ? 'badge-medium' : 'badge-safe';
+const cls = s => s < 40 ? 'c-red' : s < 70 ? 'c-amber' : 'c-green';
+
+/* ── Fetch models ────────────────────────────────────────── */
+async function fetchModels() {
+  try {
+    const r = await fetch(`${API}/api/models`);
+    const m = await r.json();
+    modelSelect.innerHTML = '';
+    const keys = Object.keys(m);
+    if (!keys.length) { modelSelect.innerHTML = '<option disabled selected>No models found</option>'; return; }
+    keys.forEach(k => {
+      const o = document.createElement('option');
+      o.value = k;
+      o.textContent = `${m[k].name}  (${m[k].num_folds} fold${m[k].num_folds > 1 ? 's' : ''})`;
+      modelSelect.appendChild(o);
+    });
+    modelSelect.value = keys[0]; selectedModel = keys[0];
+  } catch {
+    modelSelect.innerHTML = '<option value="cnn_lstm">CNN-LSTM</option>';
+    selectedModel = 'cnn_lstm';
+  }
+}
+modelSelect.addEventListener('change', () => { selectedModel = modelSelect.value; chkReady(); });
+
+/* ── File ────────────────────────────────────────────────── */
+dropZone.addEventListener('click', () => fileInput.click());
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault(); dropZone.classList.remove('dragover');
+  if (e.dataTransfer.files[0]) setFile(e.dataTransfer.files[0]);
+});
+fileInput.addEventListener('change', () => { if (fileInput.files[0]) setFile(fileInput.files[0]); });
+
+function setFile(f) {
+  selectedFile = f;
+  fileChip.textContent = `${f.name}  (${(f.size/1e6).toFixed(1)} MB)`;
+  fileChip.classList.add('show');
+  chkReady();
+}
+function chkReady() { btnGo.classList.toggle('ready', !!(selectedFile && selectedModel)); }
+
+/* ── Analyze ─────────────────────────────────────────────── */
+btnGo.addEventListener('click', async () => {
+  if (!selectedFile || !selectedModel) return;
+  btnGo.classList.add('loading'); btnGo.textContent = 'Uploading…';
+  showOl('Uploading video…', '');
+
+  const form = new FormData(); form.append('file', selectedFile);
+  try {
+    const res = await fetch(`${API}/api/upload`, { method: 'POST', body: form });
+    const d = await res.json();
+    sessionId = d.session_id; uploadedPath = d.path;
+  } catch (e) {
+    hideOl(); btnGo.classList.remove('loading'); btnGo.textContent = 'Analyze Video';
+    alert('Upload failed: ' + e.message); return;
+  }
+
+  dashVideo.src = URL.createObjectURL(selectedFile);
+  $('tb-model').textContent = selectedModel.toUpperCase().replace('_', '-');
+  $('mi-arch').textContent  = selectedModel.toUpperCase().replace('_', '-');
+
+  uploadScreen.style.display = 'none';
+  dashEl.classList.add('on');
+  resetState();
+  showOl('Loading model…', '');
+  startWS();
+});
+
+/* ── WebSocket ───────────────────────────────────────────── */
+function startWS() {
+  const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  ws = new WebSocket(`${proto}//${location.host}/ws/analyze/${sessionId}`);
+  ws.onopen    = () => ws.send(JSON.stringify({ model: selectedModel, video_path: uploadedPath }));
+  ws.onmessage = e => handleMsg(JSON.parse(e.data));
+  ws.onerror   = () => { setSt('err', 'Error'); hideOl(); };
+  ws.onclose   = () => { if ($('stxt').textContent === 'Analyzing') setSt('done', 'Complete'); };
+}
+
+function handleMsg(msg) {
+  if (msg.error) { hideOl(); setSt('err', 'Error: ' + msg.error); return; }
+  switch (msg.status) {
+    case 'loading_model':
+      showOl('Loading model…', msg.model); break;
+    case 'model_loaded':
+      if (msg.meta) {
+        const m = msg.meta;
+        if (m.best_val_auc != null) $('mi-auc').textContent  = m.best_val_auc.toFixed(4);
+        if (m.epoch != null)        $('mi-epoch').textContent = `Epoch ${m.epoch}`;
+        if (m.fold  != null)        $('mi-fold').textContent  = `Fold ${m.fold}`;
+      }
+      showOl('Decoding video…', 'Reading frame metadata'); break;
+    case 'decoding_video':
+      showOl('Decoding video…', ''); break;
+    case 'video_decoded':
+      showOl(`Ready — ${msg.sampled_frames} frames`, `Duration: ${msg.duration_sec}s  ·  ${msg.video_fps} fps`); break;
+    case 'analyzing':
+      hideOl();
+      setSt('live', 'Analyzing');
+      $('rec-dot').classList.add('on'); $('rec-txt').textContent = 'ANALYZING';
+      $('live-score').classList.add('on'); $('live-prob').classList.add('on');
+      dashVideo.play().catch(() => {});
+      break;
+    case 'frame_result':
+      bufferResult(msg); break;
+    case 'complete':
+      analysisComplete = true; onComplete(msg); break;
+  }
+}
+
+/* ── Buffer & sync ───────────────────────────────────────── */
+function bufferResult(r) {
+  allResults.push(r);
+  allScores.push(r.safety_score);
+  allProbs.push(r.smoothed_prob);
+  chartTimes.push(r.time_sec);
+  maxCrashProb = Math.max(maxCrashProb, r.smoothed_prob);
+  drawScoreChart(); drawProbChart();
+  updateDist(); updateSummary();
+}
+
+dashVideo.addEventListener('timeupdate', () => {
+  if (!allResults.length) return;
+  const t = dashVideo.currentTime;
+  let best = allResults[0], bd = Math.abs(best.time_sec - t);
+  for (const r of allResults) {
+    const d = Math.abs(r.time_sec - t);
+    if (d < bd) { bd = d; best = r; }
+    if (r.time_sec > t + 10) break;
+  }
+  renderCurrent(best);
+});
+
+function renderCurrent(r) {
+  const s = r.safety_score, p = r.smoothed_prob, band = r.risk_band, prog = r.progress;
+
+  $('vsh-num').textContent = Math.round(s);
+  $('vsh-num').className = `vsh-num ${cls(s)}`;
+  const vb = $('vsh-band');
+  vb.textContent = band === 'HIGH RISK' ? 'HIGH' : band;
+  vb.className = `vsh-band ${bdg(s)}`;
+
+  $('vprog-fill').style.width   = prog + '%';
+  $('vprog-fill').style.background = rc(s);
+
+  setRing(s);
+  $('gauge-num').textContent = Math.round(s);
+  $('gauge-num').className   = `gauge-num ${cls(s)}`;
+  const rb = $('risk-badge'); rb.textContent = band; rb.className = `risk-badge ${bdg(s)}`;
+
+  const bs = $('big-score'); bs.textContent = Math.round(s);
+  bs.className = `csb-num ${cls(s)}`;
+  const bb = $('big-band'); bb.textContent = band; bb.className = `csb-band ${bdg(s)}`;
+
+  $('s-min').textContent  = Math.round(Math.min(...allScores));
+  $('s-mean').textContent = Math.round(allScores.reduce((a,b)=>a+b,0)/allScores.length);
+  $('s-max').textContent  = Math.round(Math.max(...allScores));
+
+  setM('m-prob', (p*100).toFixed(1)+'%', p>0.6?'c-red':p>0.3?'c-amber':'c-green');
+  setM('m-band', band, cls(s));
+  setM('m-win',  allResults.length, '');
+  setM('m-pos',  dashVideo.currentTime.toFixed(1)+' s', '');
+}
+
+function setM(id, val, c) {
+  const e = $(id); if (!e) return;
+  e.textContent = val; e.className = `m-val ${c}`;
+}
+
+function updateDist() {
+  const n = allScores.length; if (!n) return;
+  const sp = allScores.filter(s=>s>=70).length/n*100;
+  const mp = allScores.filter(s=>s>=40&&s<70).length/n*100;
+  const hp = allScores.filter(s=>s<40).length/n*100;
+  $('rb-s').style.width=sp+'%'; $('rb-sp').textContent=sp.toFixed(0)+'%';
+  $('rb-m').style.width=mp+'%'; $('rb-mp').textContent=mp.toFixed(0)+'%';
+  $('rb-h').style.width=hp+'%'; $('rb-hp').textContent=hp.toFixed(0)+'%';
+  $('rwin-count').textContent = `${n} windows`;
+}
+
+function updateSummary() {
+  const n = allScores.length; if (!n) return;
+  $('ss-min').textContent  = Math.round(Math.min(...allScores));
+  $('ss-max').textContent  = Math.round(Math.max(...allScores));
+  $('ss-mean').textContent = Math.round(allScores.reduce((a,b)=>a+b,0)/n);
+}
+
+function onComplete(msg) {
+  setSt('done', 'Analysis Complete');
+  $('rec-dot').classList.remove('on'); $('rec-txt').textContent = 'DONE';
+  $('live-ind').textContent = 'DONE';
+  $('live-score').classList.remove('on'); $('live-prob').classList.remove('on');
+  $('vprog-fill').style.width = '100%';
+}
+
+/* ── Charts — light-mode palette ─────────────────────────── */
+function drawChart(canvasId, times, values, opts) {
+  const canvas = $(canvasId);
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.parentElement.getBoundingClientRect();
+  if (!rect.width || times.length < 2) return;
+  canvas.width  = rect.width * dpr;
+  canvas.height = rect.height * dpr;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  const W = rect.width, H = rect.height;
+  const p = { t:10, r:12, b:24, l:38 };
+  const pw = W-p.l-p.r, ph = H-p.t-p.b;
+  ctx.clearRect(0,0,W,H);
+
+  const tMin = times[0], tMax = times[times.length-1] || 1;
+  const xS = t => p.l + ((t-tMin)/(tMax-tMin||1))*pw;
+  const yS = v => p.t + (1-v/opts.max)*ph;
+
+  /* Grid */
+  ctx.strokeStyle = 'rgba(0,0,0,0.07)'; ctx.lineWidth = 1;
+  opts.gridVals.forEach(v => {
+    const y = yS(v);
+    ctx.beginPath(); ctx.moveTo(p.l,y); ctx.lineTo(W-p.r,y); ctx.stroke();
+  });
+
+  /* Zone fills */
+  if (opts.zones) {
+    ctx.globalAlpha = 0.055;
+    opts.zones.forEach(z => {
+      ctx.fillStyle = z.color;
+      ctx.fillRect(p.l, yS(z.top), pw, yS(z.bot)-yS(z.top));
+    });
+    ctx.globalAlpha = 1;
+  }
+
+  /* Thresholds */
+  if (opts.thresholds) {
+    ctx.setLineDash([3,5]); ctx.lineWidth = 0.9;
+    opts.thresholds.forEach(th => {
+      ctx.strokeStyle = th.color;
+      ctx.beginPath(); ctx.moveTo(p.l,yS(th.val)); ctx.lineTo(W-p.r,yS(th.val)); ctx.stroke();
+    });
+    ctx.setLineDash([]);
+  }
+
+  /* Area fill */
+  ctx.beginPath();
+  values.forEach((v,i) => { const x=xS(times[i]),y=yS(v); i?ctx.lineTo(x,y):ctx.moveTo(x,y); });
+  ctx.lineTo(xS(times[times.length-1]), yS(0));
+  ctx.lineTo(xS(times[0]), yS(0));
+  ctx.closePath();
+  if (opts.gradient) {
+    const g = ctx.createLinearGradient(0, yS(opts.max), 0, yS(0));
+    opts.gradient.forEach(s => g.addColorStop(s[0], s[1]));
+    ctx.fillStyle = g;
+  } else { ctx.fillStyle = opts.fillColor; }
+  ctx.fill();
+
+  /* Line */
+  ctx.lineWidth = 2; ctx.lineJoin = 'round';
+  if (opts.segColor) {
+    for (let i=1; i<values.length; i++) {
+      ctx.beginPath();
+      ctx.strokeStyle = opts.segColor(values[i]);
+      ctx.moveTo(xS(times[i-1]), yS(values[i-1]));
+      ctx.lineTo(xS(times[i]),   yS(values[i]));
+      ctx.stroke();
+    }
+  } else {
+    ctx.strokeStyle = opts.lineColor;
+    ctx.beginPath();
+    values.forEach((v,i) => { const x=xS(times[i]),y=yS(v); i?ctx.lineTo(x,y):ctx.moveTo(x,y); });
+    ctx.stroke();
+  }
+
+  /* Time cursor */
+  if (!analysisComplete && dashVideo.currentTime > 0) {
+    const cx = xS(dashVideo.currentTime);
+    ctx.strokeStyle = 'rgba(0,0,0,0.15)'; ctx.lineWidth = 1.2;
+    ctx.beginPath(); ctx.moveTo(cx,p.t); ctx.lineTo(cx,H-p.b); ctx.stroke();
+  }
+
+  /* Axis labels — dark text for light bg */
+  ctx.fillStyle = 'rgba(0,0,0,0.38)';
+  ctx.font = '10px "Fira Code"';
+  ctx.textAlign = 'right';
+  opts.yLabels.forEach(([v, lbl]) => ctx.fillText(lbl, p.l-4, yS(v)+4));
+  ctx.textAlign = 'center';
+  const step = Math.max(1, Math.floor(times.length/5));
+  for (let i=0; i<times.length; i+=step)
+    ctx.fillText(times[i].toFixed(0)+'s', xS(times[i]), H-5);
+}
+
+function drawScoreChart() {
+  drawChart('score-chart', chartTimes, allScores, {
+    max: 100,
+    gridVals: [0,25,50,75,100],
+    zones: [
+      { color:'#dc2626', top:40,  bot:0   },
+      { color:'#d97706', top:70,  bot:40  },
+      { color:'#16a34a', top:100, bot:70  },
+    ],
+    thresholds: [
+      { val:40, color:'rgba(220,38,38,0.30)' },
+      { val:70, color:'rgba(217,119,6,0.30)' },
+    ],
+    gradient: [
+      [0,   'rgba(22,163,74,0.18)'],
+      [0.55,'rgba(217,119,6,0.07)'],
+      [1,   'rgba(220,38,38,0.03)'],
+    ],
+    segColor: v => v<40?'#dc2626':v<70?'#d97706':'#16a34a',
+    yLabels: [[0,'0'],[50,'50'],[100,'100']],
+  });
+}
+
+function drawProbChart() {
+  drawChart('prob-chart', chartTimes, allProbs.map(p=>p*100), {
+    max: 100,
+    gridVals: [0,50,100],
+    thresholds: [{ val:60, color:'rgba(220,38,38,0.30)' }],
+    gradient: [
+      [0, 'rgba(220,38,38,0.18)'],
+      [1, 'rgba(220,38,38,0.02)'],
+    ],
+    lineColor: '#dc2626',
+    yLabels: [[0,'0%'],[50,'50%'],[100,'100%']],
+  });
+}
+
+/* ── Reset ───────────────────────────────────────────────── */
+function resetState() {
+  allResults=[]; allScores=[]; allProbs=[]; chartTimes=[];
+  maxCrashProb=0; analysisComplete=false;
+
+  $('vsh-num').textContent='--'; $('vsh-num').className='vsh-num';
+  $('vsh-band').textContent='WAITING'; $('vsh-band').className='vsh-band badge-wait';
+  $('vprog-fill').style.width='0%';
+  $('rec-dot').classList.remove('on'); $('rec-txt').textContent='IDLE';
+
+  $('ring-fill').style.strokeDasharray=`0 ${RING_C}`;
+  $('ring-fill').style.stroke='var(--green)';
+  $('gauge-num').textContent='--'; $('gauge-num').className='gauge-num';
+  $('risk-badge').textContent='WAITING'; $('risk-badge').className='risk-badge badge-wait';
+  $('big-score').textContent='--'; $('big-score').className='csb-num';
+  $('big-band').textContent='WAITING'; $('big-band').className='csb-band badge-wait';
+  ['s-min','s-mean','s-max'].forEach(id=>$(id).textContent='--');
+  $('rb-s').style.width='100%'; $('rb-m').style.width='0%'; $('rb-h').style.width='0%';
+  $('rb-sp').textContent='100%'; $('rb-mp').textContent='0%'; $('rb-hp').textContent='0%';
+  $('rwin-count').textContent='0 windows';
+  ['m-prob','m-band','m-win','m-pos'].forEach(id=>{ const e=$(id); if(e){e.textContent='—';e.className='m-val';} });
+  $('m-win').textContent='0'; $('m-pos').textContent='0.0 s';
+  ['ss-min','ss-max','ss-mean'].forEach(id=>$(id).textContent='—');
+  $('mi-auc').textContent='—'; $('mi-epoch').textContent='—'; $('mi-fold').textContent='—';
+  $('live-score').classList.remove('on'); $('live-prob').classList.remove('on');
+  $('live-ind').classList.add('on'); $('live-ind').textContent='LIVE';
+  setSt('', 'Connecting');
+}
+
+btnNew.addEventListener('click', () => {
+  if (ws) { ws.close(); ws=null; }
+  dashVideo.pause(); dashVideo.src='';
+  dashEl.classList.remove('on');
+  uploadScreen.style.display='';
+  btnGo.classList.remove('loading','ready'); btnGo.textContent='Analyze Video';
+  selectedFile=null; fileChip.classList.remove('show'); fileInput.value='';
+});
+
+/* ── Helpers ─────────────────────────────────────────────── */
+function setSt(c, txt) {
+  $('sdot').className = 'sdot' + (c ? ' '+c : '');
+  $('stxt').textContent = txt;
+}
+function showOl(main, sub) { $('ol-main').textContent=main; $('ol-sub').textContent=sub||''; overlay.classList.add('on'); }
+function hideOl() { overlay.classList.remove('on'); }
+
+fetchModels();
+</script>
+</body>
+</html>

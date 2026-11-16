@@ -7,3 +7,16 @@ notebooks/YOLOv8-LSTM.ipynb
 Screenshot 2026-04-10 040805.png
 
 Dataset/
+# Model weights & archives (too large for GitHub)
+*.pth
+*.pt
+*.zip
+
+# Python / runtime artifacts
+__pycache__/
+*.pyc
+dashboard/uploads/
+
+# Media & personal files
+*.mp4
+payment_receipt.pdf
